@@ -1,0 +1,11 @@
+*.o
+*.d
+*.o.d
+
+/proxy
+/server
+/client
+/target/
+
+.vscode/
+

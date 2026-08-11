@@ -1,0 +1,12 @@
+[package]
+name = "my_project"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "client"
+path = "src/client.rs"
+
+[[bin]]
+name = "proxy"
+path = "src/proxy.rs"
