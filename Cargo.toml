@@ -10,3 +10,6 @@ path = "src/client.rs"
 [[bin]]
 name = "proxy"
 path = "src/proxy.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
