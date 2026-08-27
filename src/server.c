@@ -69,9 +69,9 @@ int main() {
     while ((valread = read(new_socket, buff, BUFFER_SIZE)) > 0) {
 
       struct modbus_tcp *header = (struct modbus_tcp *)buff;
-      uint16_t transaction_id = htons(header->transaction_id);
-      uint16_t protocol_id = htons(header->protocol_id);
-      uint16_t lenght = htons(header->lenght);
+      uint16_t transaction_id = ntohs(header->transaction_id);
+      uint16_t protocol_id = ntohs(header->protocol_id);
+      uint16_t lenght = ntohs(header->lenght);
       uint8_t unit_id =
           header
               ->unit_id; // dont need htons for header->unit_id cuz only 1 byte
@@ -91,8 +91,25 @@ int main() {
       printf("\n");
       printf("client IP: %s\n", client_ip);
       memset(buff, 0, sizeof(buff));
-      uint8_t answer[] = "read succesfull ";
-      send(new_socket, answer, sizeof(answer), 0);
+
+      uint8_t answer_buff[260];
+
+      struct modbus_tcp response = {0};
+
+      response.transaction_id = htons(transaction_id);
+      response.protocol_id = htons(protocol_id);
+      response.lenght = htons(13);
+      response.unit_id = unit_id;
+
+      uint8_t pdu_response[12] = {0x03, 0x0A, 0x00, 0x01, 0x00, 0x02,
+                                  0x00, 0x03, 0x00, 0x04, 0x00, 0x05};
+      memset(answer_buff, 0, sizeof(answer_buff));
+      memcpy(answer_buff, &response, sizeof(response));
+      memcpy(answer_buff + sizeof(response), pdu_response,
+             sizeof(pdu_response));
+
+      int total_len = sizeof(response) + sizeof(pdu_response);
+      send(new_socket, answer_buff, total_len, 0);
     }
 
     close(new_socket);

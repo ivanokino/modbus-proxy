@@ -1,6 +1,8 @@
-use std::io::{stdin, Read, Write};
+use std::io::{Read, Write, stdin};
 use std::net::TcpStream;
-
+use std::os::raw;
+use std::ptr;
+use std::str::from_utf8;
 #[repr(C, packed)]
 struct ModbusTcp {
     transaction_id: u16,
@@ -54,8 +56,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let header_ptr = &norm_pack as *const ModbusTcp as *const u8;
 
         unsafe {
-            std::ptr::copy_nonoverlapping(header_ptr, buff_ptr, std::mem::size_of_val(&norm_pack));
-            std::ptr::copy_nonoverlapping(
+            ptr::copy_nonoverlapping(header_ptr, buff_ptr, std::mem::size_of_val(&norm_pack));
+            ptr::copy_nonoverlapping(
                 pdu_data.as_ptr(),
                 buff_ptr.add(size_of::<ModbusTcp>()),
                 size_of_val(&pdu_data),
@@ -67,8 +69,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let header_ptr = &bad_pack as *const ModbusTcp as *const u8;
 
         unsafe {
-            std::ptr::copy_nonoverlapping(header_ptr, buff_ptr, std::mem::size_of_val(&bad_pack));
-            std::ptr::copy_nonoverlapping(
+            ptr::copy_nonoverlapping(header_ptr, buff_ptr, std::mem::size_of_val(&bad_pack));
+            ptr::copy_nonoverlapping(
                 pdu_data.as_ptr(),
                 buff_ptr.add(size_of::<ModbusTcp>()),
                 size_of_val(&pdu_data),
@@ -76,14 +78,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         stream.write_all(&buff[..total_len])?;
+        let mut recv_buff = [0; 260];
+
+        let len = stream.read(&mut recv_buff)?;
+        println!("{}", String::from_utf8_lossy(&recv_buff[..len]));
+        return Ok(());
     }
 
     let mut recv_buffer = [0; 512];
-    let n = stream.read(&mut recv_buffer)?;
+    let _ = stream.read(&mut recv_buffer)?;
 
-    let resp = String::from_utf8_lossy(&recv_buffer[..n]).to_string();
+    let trans_id: [u8; 2] = recv_buffer[0..2].try_into()?;
+    let proto_id = recv_buffer[2..4].try_into()?;
+    let length = recv_buffer[4..6].try_into()?;
 
-    println!("response : {}", resp);
+    let resp_s = ModbusTcp {
+        transaction_id: u16::from_be_bytes(trans_id),
+        protocol_id: u16::from_be_bytes(proto_id),
+        length: u16::from_be_bytes(length),
+        unit_id: recv_buffer[6],
+    };
+    let len = resp_s.length as usize;
 
+    let data = &recv_buffer[6..len];
+
+    print!(
+        "RESPONSE:\n
+transaction_id: {}\n
+protocol_id: {}\n
+length: {}\n
+unit_id: {}\n
+data: ",
+        { resp_s.transaction_id },
+        { resp_s.protocol_id },
+        { resp_s.length },
+        { resp_s.unit_id }
+    );
+
+    for i in data {
+        print!("0x{:02x} ", i);
+    }
+    print!("\n");
     Ok(())
 }
