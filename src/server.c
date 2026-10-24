@@ -9,7 +9,7 @@
 #define BUFFER_SIZE 2048
 
 // ITS BING ENDIAN, LATER USE HTONS FOR ALL
-typedef struct __attribute__((packed)) modbus_tcp {
+struct __attribute__((packed)) modbus_tcp {
   uint16_t transaction_id;
   uint16_t protocol_id; // protoc modbus tcp is always 0
   uint16_t lenght;      // numb of remaining gytes,

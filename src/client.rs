@@ -11,7 +11,7 @@ struct ModbusTcp {
 }
 
 impl ModbusTcp {
-    fn to_be(&mut self) {
+    fn make_be(&mut self) {
         self.transaction_id = self.transaction_id.to_be();
         self.protocol_id = self.protocol_id.to_be();
         self.length = self.length.to_be();
@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         length: 6, //with unit_id too
         unit_id: 1,
     };
-    norm_pack.to_be();
+    norm_pack.make_be();
 
     let mut bad_pack = ModbusTcp {
         transaction_id: 2,
@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         length: 10,
         unit_id: 1,
     };
-    bad_pack.to_be();
+    bad_pack.make_be();
 
     let total_len = size_of::<ModbusTcp>() + size_of_val(&pdu_data);
 
@@ -117,6 +117,6 @@ data: ",
     for i in data {
         print!("0x{:02x} ", i);
     }
-    print!("\n");
+    println!();
     Ok(())
 }
