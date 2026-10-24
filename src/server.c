@@ -29,7 +29,7 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  // CAN REUSE SOCKET AND DONT CLOSE THE PORT
+  // CAN REUSE SOCKET AND DONT CLOSE THE POcRT
   if (setsockopt(serv_d, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
     perror("setsockopt() error");
     exit(EXIT_FAILURE);

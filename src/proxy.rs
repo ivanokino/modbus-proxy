@@ -1,9 +1,10 @@
 use std::sync::Arc;
-
+use std::time::Duration;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
     sync::Mutex,
+    time::timeout,
 };
 
 #[tokio::main]
@@ -20,7 +21,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tokio::spawn(async move {
             let buff = match handle(&mut stream).await {
                 Ok(x) => x,
-                Err(_) => return,
+                Err(_) => {
+                    println!("read_exact timeout expired");
+                    return;
+                }
             };
 
             let is_normal = check(&buff);
@@ -47,11 +51,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn handle(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
-    let mut buff = [0; 1024];
+    let mut header = [0; 7];
+    let _ = stream.read_exact(&mut header).await?;
 
-    let nofbytes = stream.read(&mut buff).await?; // (number of bytes)
+    let body_len = u16::from_be_bytes([header[4], header[5]]) as usize - 1; //-1 cuz of unit id 
 
-    Ok(buff[..nofbytes].to_vec())
+    let mut body = vec![0u8; body_len];
+
+    timeout(Duration::from_secs(3), stream.read_exact(&mut body)).await??;
+
+    let mut packet = header.to_vec();
+    packet.extend_from_slice(&body[..body_len]);
+
+    Ok(packet)
 }
 
 fn check(buff: &[u8]) -> bool {

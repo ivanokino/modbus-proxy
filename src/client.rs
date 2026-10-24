@@ -1,8 +1,7 @@
 use std::io::{Read, Write, stdin};
 use std::net::TcpStream;
-use std::os::raw;
 use std::ptr;
-use std::str::from_utf8;
+
 #[repr(C, packed)]
 struct ModbusTcp {
     transaction_id: u16,
