@@ -8,7 +8,6 @@
 #define PORT 8081
 #define BUFFER_SIZE 2048
 
-// ITS BING ENDIAN, LATER USE HTONS FOR ALL
 struct __attribute__((packed)) modbus_tcp {
   uint16_t transaction_id;
   uint16_t protocol_id; // protoc modbus tcp is always 0
@@ -29,7 +28,7 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
-  // CAN REUSE SOCKET AND DONT CLOSE THE POcRT
+  // CAN REUSE SOCKET AND DONT CLOSE THE PORT
   if (setsockopt(serv_d, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
     perror("setsockopt() error");
     exit(EXIT_FAILURE);

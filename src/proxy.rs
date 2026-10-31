@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let buff = match handle(&mut stream).await {
                 Ok(x) => x,
                 Err(_) => {
-                    println!("read_exact timeout expired");
+                    println!("user: read_exact timeout expired or server got incorrect data");
                     return;
                 }
             };
@@ -36,15 +36,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 let mut guard = host_clone.lock().await;
 
+                println!("writing request");
                 let _ = guard.write_all(&buff).await;
 
-                let mut buff_resp = [0; 512];
-                let nofbytes = match guard.read(&mut buff_resp).await {
+                let buff_resp = match handle(&mut guard).await {
                     Ok(x) => x,
-                    Err(_) => return,
+                    Err(_) => {
+                        println!(
+                            "server: read_exact timeout expired or got incorrect data from the server "
+                        );
+                        return;
+                    }
                 };
 
-                let _ = stream.write(&buff_resp[..nofbytes]).await;
+                let is_normal = check(&buff);
+                if !is_normal {
+                    println!("bad response");
+
+                    return;
+                }
+                println!("writing resp");
+                let _ = stream.write_all(&buff_resp).await;
             }
         });
     }
@@ -55,6 +67,10 @@ async fn handle(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
     let _ = stream.read_exact(&mut header).await?;
 
     let body_len = u16::from_be_bytes([header[4], header[5]]) as usize - 1; //-1 cuz of unit id 
+
+    if body_len > 260 || body_len == 0 {
+        return Err(std::io::Error::other("incorrect len"));
+    }
 
     let mut body = vec![0u8; body_len];
 
@@ -76,8 +92,6 @@ fn check(buff: &[u8]) -> bool {
     if (length as usize) != (buff.len() - 6) || (buff[2] != 0 || buff[3] != 0) || buff.len() > 260 {
         return false;
     }
-
-    println!("length: {}", length);
 
     true
 }

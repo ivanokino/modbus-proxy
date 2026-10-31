@@ -1,7 +1,6 @@
 use std::io::{Read, Write, stdin};
 use std::net::TcpStream;
 use std::ptr;
-
 #[repr(C, packed)]
 struct ModbusTcp {
     transaction_id: u16,
@@ -9,7 +8,6 @@ struct ModbusTcp {
     length: u16,
     unit_id: u8,
 }
-
 impl ModbusTcp {
     fn make_be(&mut self) {
         self.transaction_id = self.transaction_id.to_be();
@@ -99,7 +97,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let len = resp_s.length as usize;
 
-    let data = &recv_buffer[6..len];
+    let data = &recv_buffer[7..6 + len];
 
     print!(
         "RESPONSE:\n
