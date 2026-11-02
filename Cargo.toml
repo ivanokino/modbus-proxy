@@ -5,11 +5,11 @@ edition = "2024"
 
 [[bin]]
 name = "client"
-path = "src/client.rs"
+path = "src/env/client.rs"
 
 [[bin]]
 name = "proxy"
-path = "src/proxy.rs"
+path = "src/proxy/proxy.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
