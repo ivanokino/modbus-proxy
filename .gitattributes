@@ -1,0 +1,4 @@
+
+testing_env/** linguist-vendored=false
+testing_env/** linguist-documentation=false
+testing_env/** linguist-generated=false

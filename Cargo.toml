@@ -5,7 +5,7 @@ edition = "2024"
 
 [[bin]]
 name = "client"
-path = "src/env/client.rs"
+path = "src/testing_env/client.rs"
 
 [[bin]]
 name = "proxy"
