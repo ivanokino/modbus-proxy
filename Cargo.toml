@@ -13,3 +13,4 @@ path = "src/proxy/proxy.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
+ratatui = { version = "0.30.2", features = ["all-widgets"] }

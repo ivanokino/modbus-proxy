@@ -2,7 +2,7 @@
 
 C server
 
-Rust proxy
+Rust proxy with TUI
 
 Rust client
 
