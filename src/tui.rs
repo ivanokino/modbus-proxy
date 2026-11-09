@@ -12,43 +12,34 @@ use ratatui::{
     style::{Color, Style},
     widgets::{Block, Borders, Paragraph, Row, Table, TableState, Wrap},
 };
-use std::{collections::VecDeque, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
-use crate::structs::{AppInputs, LogManager, ModBusLog, ProxyState};
+use crate::structs::{App, ProxyState};
 
 pub async fn run_tui(
     state: Arc<Mutex<ProxyState>>,
-    mut log_manager: LogManager,
+    mut app: App,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut term = ratatui::init();
 
-    let mut filters = AppInputs::default();
-    let mut filtered_funcs_vec: Vec<u8> = Vec::new();
-
     let mut table_state = TableState::default();
 
-    let mut autoscroll = false;
     loop {
-        while let Ok(log) = log_manager.rx.try_recv() {
-            log_manager.logs.push_back(log);
-            if log_manager.logs.len() > 10000 {
-                log_manager.logs.pop_front();
+        {
+            let log_manager = &mut app.log_m;
+            while let Ok(log) = log_manager.rx.try_recv() {
+                log_manager.logs.push_back(log);
+                if log_manager.logs.len() > 10000 {
+                    log_manager.logs.pop_front();
+                }
             }
         }
 
         let current = table_state.selected().unwrap_or(0);
-        term.draw(|f| {
-            render(
-                f,
-                &log_manager.logs,
-                &mut filters,
-                &filtered_funcs_vec,
-                &mut table_state,
-                &autoscroll,
-            )
-        })?;
+        term.draw(|f| render(f, &app, table_state))?;
 
+        let filters = &mut app.inputs;
         if event::poll(Duration::from_millis(100))?
             && let Event::Key(key) = event::read()?
         {
@@ -56,12 +47,12 @@ pub async fn run_tui(
                 KeyCode::Esc => break,
                 KeyCode::Char(c) => {
                     if c == 'x' {
-                        filtered_funcs_vec.clear();
+                        app.filtered_funcs_vec.clear();
                         let mut guard = state.lock().await;
                         guard.filtered_funcs.iter_mut().for_each(|x| *x = false);
                         guard.is_func_filter = false;
                     } else if c == 's' {
-                        autoscroll = !autoscroll;
+                        app.autoscroll = !app.autoscroll;
                     } else {
                         filters.func_code_input.push(c);
                     }
@@ -70,18 +61,18 @@ pub async fn run_tui(
                     filters.func_code_input.pop();
                 }
                 KeyCode::Enter => {
-                    let mut guard = state.lock().await;
-
-                    guard.is_func_filter = true;
-
                     let func_num = filters.func_code_input.parse::<u8>().unwrap_or_default();
+                    {
+                        let mut guard = state.lock().await;
 
-                    guard.filtered_funcs[func_num as usize] = true;
+                        guard.is_func_filter = true;
+                        guard.filtered_funcs[func_num as usize] = true;
+                    }
 
-                    filtered_funcs_vec.push(func_num);
+                    app.filtered_funcs_vec.push(func_num);
                 }
                 KeyCode::Down => {
-                    if current < log_manager.logs.len() - 1 {
+                    if current < app.log_m.logs.len() - 1 {
                         table_state.select(Some(current + 1));
                     }
                 }
@@ -96,15 +87,9 @@ pub async fn run_tui(
     Ok(())
 }
 
-fn render(
-    frame: &mut Frame,
-    logs: &VecDeque<ModBusLog>,
-    filters: &mut AppInputs,
-    funcs_filtered: &Vec<u8>,
-    table_state: &mut TableState,
-    autoscroll: &bool,
-) {
-    if *autoscroll {
+fn render(frame: &mut Frame, app: &App, mut table_state: TableState) {
+    let logs = &app.log_m.logs;
+    if app.autoscroll {
         table_state.select(Some(logs.len() - 1));
     }
     let chunks = Layout::default()
@@ -157,12 +142,12 @@ fn render(
     .highlight_symbol(">>")
     .row_highlight_style(Style::default().bg(Color::Blue).fg(Color::White));
 
-    let input_func_code = Paragraph::new(filters.func_code_input.as_str())
+    let input_func_code = Paragraph::new(app.inputs.func_code_input.as_str())
         .block(Block::default().borders(Borders::ALL).title("filter func"));
 
-    let filters_status =
-        Paragraph::new(format!("FUNC FILTERED: {:?}", funcs_filtered)).wrap(Wrap { trim: true });
+    let filters_status = Paragraph::new(format!("FUNC FILTERED: {:?}", app.filtered_funcs_vec))
+        .wrap(Wrap { trim: true });
     frame.render_widget(filters_status, right_down);
     frame.render_widget(input_func_code, right_up);
-    frame.render_stateful_widget(table, left, table_state);
+    frame.render_stateful_widget(table, left, &mut table_state);
 }

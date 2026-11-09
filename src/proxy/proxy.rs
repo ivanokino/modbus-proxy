@@ -12,7 +12,7 @@ use tokio::{
 pub mod structs;
 use structs::ProxyState;
 
-use crate::structs::{LogManager, ModBusLog, ModbusTcp};
+use crate::structs::{App, AppInputs, LogManager, ModBusLog, ModbusTcp};
 use crate::tui::run_tui;
 
 #[path = "../tui.rs"]
@@ -36,8 +36,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let tui_state_clone = Arc::clone(&proxy_state_main);
 
+    let autoscroll = false;
+
+    let app = App {
+        log_m: log_manager,
+        filtered_funcs_vec: Vec::new(),
+        inputs: AppInputs::default(),
+        autoscroll,
+    };
+
     tokio::spawn(async move {
-        let _ = run_tui(tui_state_clone, log_manager).await;
+        let _ = run_tui(tui_state_clone, app).await;
     });
 
     loop {

@@ -24,6 +24,13 @@ impl ModbusTcp {
     }
 }
 
+pub struct App {
+    pub log_m: LogManager,
+    pub inputs: AppInputs,
+    pub filtered_funcs_vec: Vec<u8>,
+    pub autoscroll: bool,
+}
+
 pub struct ModBusLog {
     pub header: ModbusTcp,
     pub peer: SocketAddr,
