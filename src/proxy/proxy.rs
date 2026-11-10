@@ -1,7 +1,7 @@
-use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::mpsc::channel;
 use std::time::Duration;
+use std::{collections::VecDeque, env};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -20,6 +20,14 @@ mod tui;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
+
+    let timeout: u64 = args //timeout for handle() function
+        .windows(2)
+        .find(|x| x[0] == "-t" || x[0] == "--timeout")
+        .and_then(|x| x[1].parse().ok())
+        .unwrap_or(3);
+
     let listener = TcpListener::bind("127.0.0.1:8080").await?;
     let write_to_host_stream = TcpStream::connect("127.0.0.1:8081").await?;
 
@@ -58,10 +66,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let tx = tx.clone();
         tokio::spawn(async move {
             loop {
-                let buff = match handle(&mut stream).await {
+                let buff = match handle(&mut stream, timeout).await {
                     Ok(x) => x,
                     Err(_) => {
-                        return; // timeout expired or got incorrect data from the proxy
+                        return; // timeout expired or got incorrect data from client
                     }
                 };
 
@@ -84,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     let _ = guard.write_all(&buff).await;
 
-                    let buff_resp = match handle(&mut guard).await {
+                    let buff_resp = match handle(&mut guard, timeout).await {
                         Ok(x) => x,
                         Err(_) => {
                             return; // timeout expired or got incorrect data from the server
@@ -102,7 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-async fn handle(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
+async fn handle(stream: &mut TcpStream, read_timeout: u64) -> Result<Vec<u8>, std::io::Error> {
     let mut header = [0; 7];
     let _ = stream.read_exact(&mut header).await?;
 
@@ -114,7 +122,11 @@ async fn handle(stream: &mut TcpStream) -> Result<Vec<u8>, std::io::Error> {
 
     let mut body = vec![0u8; body_len];
 
-    timeout(Duration::from_secs(3), stream.read_exact(&mut body)).await??;
+    timeout(
+        Duration::from_secs(read_timeout),
+        stream.read_exact(&mut body),
+    )
+    .await??;
 
     let mut packet = header.to_vec();
     packet.extend_from_slice(&body[..body_len]);
