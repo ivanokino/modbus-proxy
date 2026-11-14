@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::sync::mpsc::channel;
 use std::time::Duration;
@@ -45,12 +46,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tui_state_clone = Arc::clone(&proxy_state_main);
 
     let autoscroll = false;
-
+    let input_select = false;
     let app = App {
         log_m: log_manager,
         filtered_funcs_vec: Vec::new(),
         inputs: AppInputs::default(),
         autoscroll,
+        filtered_ip_vec: Vec::new(),
+        input_select,
     };
 
     tokio::spawn(async move {
@@ -73,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 };
 
-                let is_normal = check_request(&buff, &proxy_state).await;
+                let is_normal = check_request(&buff, &proxy_state, peer.ip()).await;
 
                 if !is_normal {
                     _ = stream.shutdown().await;
@@ -98,7 +101,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             return; // timeout expired or got incorrect data from the server
                         }
                     };
-
                     let is_normal = check_response(&buff);
                     if !is_normal {
                         return;
@@ -134,15 +136,20 @@ async fn handle(stream: &mut TcpStream, read_timeout: u64) -> Result<Vec<u8>, st
     Ok(packet)
 }
 
-async fn check_request(buff: &[u8], proxy_state: &Arc<Mutex<ProxyState>>) -> bool {
+async fn check_request(buff: &[u8], proxy_state: &Arc<Mutex<ProxyState>>, peer: IpAddr) -> bool {
     if buff.len() < 7 {
         return false;
     }
 
     let length: u16 = u16::from_be_bytes([buff[4], buff[5]]);
-
     let guard = proxy_state.lock().await;
+
+    // CHECK FUNC FILTERS
     if guard.is_func_filter && guard.filtered_funcs[buff[7] as usize] {
+        return false;
+    }
+    // CHECK IP FILTERS
+    if guard.is_ip_filter && guard.filtered_ip_hashset.contains(&peer) {
         return false;
     }
     if (length as usize) != (buff.len() - 6) || (buff[2] != 0 || buff[3] != 0) || buff.len() > 260 {
