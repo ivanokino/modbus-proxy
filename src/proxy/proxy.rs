@@ -1,6 +1,5 @@
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::sync::mpsc::channel;
 use std::time::Duration;
 use std::{collections::VecDeque, env};
 use tokio::{
@@ -36,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let proxy_state_main = Arc::new(Mutex::new(ProxyState::init()));
 
-    let (tx, rx) = channel::<ModBusLog>();
+    let (tx, rx) = tokio::sync::mpsc::channel::<ModBusLog>(100);
 
     let log_manager = LogManager {
         logs: VecDeque::new(),
@@ -47,6 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let autoscroll = false;
     let input_select = false;
+
     let app = App {
         log_m: log_manager,
         filtered_funcs_vec: Vec::new(),
@@ -89,7 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         peer,
                         func_code: buff[7],
                     };
-                    let _ = tx.send(log); // SEND HEADER LOG TO TUI 
+                    let _ = tx.send(log).await; // SEND HEADER LOG TO TUI 
 
                     let mut guard = host_clone.lock().await;
 

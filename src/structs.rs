@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 use std::{
     collections::{HashSet, VecDeque},
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::mpsc::Receiver,
+    net::{IpAddr, SocketAddr},
 };
+use tokio::sync::mpsc::Receiver;
 pub struct ModbusTcp {
     pub transaction_id: u16,
     pub protocol_id: u16,
