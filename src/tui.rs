@@ -146,8 +146,7 @@ pub async fn run_tui(
 fn render(frame: &mut Frame, app: &App, mut table_state: TableState, mut table_current: usize) {
     let logs = &app.log_m.logs;
     if app.autoscroll {
-        table_state.select(Some(logs.len().saturating_sub(1)));
-        table_current = logs.len().saturating_sub(frame.area().height as usize);
+        table_current = logs.len().saturating_sub(1);
     }
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
