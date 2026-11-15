@@ -205,7 +205,7 @@ fn render(frame: &mut Frame, app: &App, mut table_state: TableState, mut table_c
         Constraint::Length(8),
         Constraint::Length(8),
         Constraint::Length(8),
-        Constraint::Length(14),
+        Constraint::Length(22),
     ])
     .header(Row::new(vec![
         "idx",

@@ -28,7 +28,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|x| x[1].parse().ok())
         .unwrap_or(3);
 
-    let listener = TcpListener::bind("127.0.0.1:8080").await?;
+    let is_meta_addr = args.iter().any(|x| *x == "-m" || *x == "--meta");
+
+    let listener = if is_meta_addr {
+        TcpListener::bind("0.0.0.0:8080").await?
+    } else {
+        TcpListener::bind("127.0.0.1:8080").await?
+    };
     let write_to_host_stream = TcpStream::connect("127.0.0.1:8081").await?;
 
     let write_to_host_stream = Arc::new(Mutex::new(write_to_host_stream));
