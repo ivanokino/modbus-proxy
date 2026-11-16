@@ -27,7 +27,7 @@ pub async fn run_tui(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut term = ratatui::init();
 
-    let table_state = TableState::default();
+    let mut table_state = TableState::default();
 
     let (tx_key, mut rx_key) = tokio::sync::mpsc::channel(100);
     let _ = thread::spawn(move || {
@@ -131,7 +131,8 @@ pub async fn run_tui(
             //// 2 - IF LOG RECEIVED
             Some(log) = log_manager.rx.recv() => {
                 log_manager.logs.push_back(log);
-                if log_manager.logs.len() > 10000 {
+                app.logs_total +=1;
+                if log_manager.logs.len() > 100000 {
                     log_manager.logs.pop_front();
                 }
                 let _ = term.draw(|f| render(f, &app, table_state, current));
@@ -189,7 +190,7 @@ fn render(frame: &mut Frame, app: &App, mut table_state: TableState, mut table_c
         let log = &logs[index];
 
         Row::new(vec![
-            (index + 1).to_string(),
+            ((app.logs_total as usize - logs.len() + 1 + index) as u64).to_string(),
             log.header.transaction_id.to_string(),
             log.header.protocol_id.to_string(),
             log.header.length.to_string(),

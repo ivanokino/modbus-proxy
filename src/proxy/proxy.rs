@@ -60,6 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         autoscroll,
         filtered_ip_vec: Vec::new(),
         input_select,
+        logs_total: 0,
     };
 
     tokio::spawn(async move {

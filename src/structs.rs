@@ -36,6 +36,7 @@ pub struct App {
     pub autoscroll: bool,
     pub filtered_ip_vec: Vec<IpAddr>,
     pub input_select: bool,
+    pub logs_total: u64,
 }
 
 pub struct ModBusLog {
