@@ -27,7 +27,7 @@ pub async fn run_tui(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut term = ratatui::init();
 
-    let mut table_state = TableState::default();
+    let table_state = TableState::default();
 
     let (tx_key, mut rx_key) = tokio::sync::mpsc::channel(100);
     let _ = thread::spawn(move || {

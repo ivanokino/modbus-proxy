@@ -1,6 +1,9 @@
-use std::io::{Read, Write, stdin};
 use std::net::TcpStream;
 use std::time::Duration;
+use std::{
+    env,
+    io::{Read, Write, stdin},
+};
 
 mod packet;
 use packet::make_correct_request;
@@ -10,6 +13,14 @@ mod structs;
 use crate::packet::{make_incorrect_request, recv_packet};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
+
+    let interval: u64 = args
+        .windows(2)
+        .find(|x| x[0] == "-i" || x[0] == "--interval")
+        .and_then(|x| x[1].parse().ok())
+        .unwrap_or(300);
+
     println!("normal packet - 1\nbad packet - 2");
 
     let mut input = String::new();
@@ -23,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             stream.write_all(&packet)?;
             recv_packet(&mut stream)?;
-            std::thread::sleep(Duration::from_millis(300));
+            std::thread::sleep(Duration::from_millis(interval));
         }
     } else {
         let packet = make_incorrect_request();
