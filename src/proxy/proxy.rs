@@ -22,18 +22,12 @@ mod tui;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
-    let timeout: u64 = args //timeout for handle() function
-        .windows(2)
-        .find(|x| x[0] == "-t" || x[0] == "--timeout")
-        .and_then(|x| x[1].parse().ok())
-        .unwrap_or(3);
-
-    let is_meta_addr = args.iter().any(|x| *x == "-m" || *x == "--meta");
+    let (timeout, port, is_meta_addr) = get_args(args);
 
     let listener = if is_meta_addr {
-        TcpListener::bind("0.0.0.0:8080").await?
+        TcpListener::bind(format!("0.0.0.0:{}", port)).await?
     } else {
-        TcpListener::bind("127.0.0.1:8080").await?
+        TcpListener::bind(format!("127.0.0.1:{}", port)).await?
     };
     let write_to_host_stream = TcpStream::connect("127.0.0.1:8081").await?;
 
@@ -117,6 +111,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
     }
+}
+
+fn get_args(args: Vec<String>) -> (u64, u16, bool) {
+    let mut timeout = 3;
+    let mut port = 8080;
+    let mut is_meta = false;
+    let mut iter = args.into_iter();
+
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "-t" | "--timeout" => {
+                if let Some(val) = iter.next() {
+                    timeout = val.parse().unwrap_or(3);
+                };
+            }
+
+            "-p" | "--port" => {
+                if let Some(val) = iter.next() {
+                    port = val.parse().unwrap_or(3);
+                };
+            }
+            "-m" | "--meta" => is_meta = true,
+
+            _ => (),
+        }
+    }
+
+    (timeout, port, is_meta)
 }
 
 async fn handle(stream: &mut TcpStream, read_timeout: u64) -> Result<Vec<u8>, std::io::Error> {

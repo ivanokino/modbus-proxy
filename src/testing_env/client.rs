@@ -13,13 +13,8 @@ mod structs;
 use crate::packet::{make_incorrect_request, recv_packet};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-
-    let interval: u64 = args
-        .windows(2)
-        .find(|x| x[0] == "-i" || x[0] == "--interval")
-        .and_then(|x| x[1].parse().ok())
-        .unwrap_or(300);
+    let args = env::args().collect();
+    let (interval, port) = get_args(args);
 
     println!("normal packet - 1\nbad packet - 2");
 
@@ -27,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     stdin().read_line(&mut input)?;
     let numb: i32 = input.trim().parse()?;
 
-    let mut stream: TcpStream = TcpStream::connect("127.0.0.1:8080")?;
+    let mut stream: TcpStream = TcpStream::connect(format!("127.0.0.1:{}", port))?;
 
     if numb == 1 {
         let packet = make_correct_request();
@@ -46,4 +41,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", String::from_utf8_lossy(&recv_buff[..len]));
         Ok(())
     }
+}
+
+fn get_args(args: Vec<String>) -> (u64, u16) {
+    let mut interval = 300;
+    let mut port = 8080;
+    let mut iter = args.into_iter();
+
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "-i" | "--interval" => {
+                if let Some(val) = iter.next() {
+                    interval = val.parse().unwrap_or(300);
+                };
+            }
+
+            "-p" | "--port" => {
+                if let Some(val) = iter.next() {
+                    port = val.parse().unwrap_or(3);
+                };
+            }
+
+            _ => (),
+        }
+    }
+
+    (interval, port)
 }
